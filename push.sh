@@ -1,3 +1,4 @@
 #!/bin/bash
+set -exuo pipefail
 docker login
-docker push magaox/latest
+docker push magaox/krank:latest

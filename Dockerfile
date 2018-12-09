@@ -1,5 +1,4 @@
-ARG BASE_CONTAINER=centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
-FROM $BASE_CONTAINER
+FROM centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
 
 USER root
 RUN yum -y update
@@ -12,8 +11,8 @@ RUN yum -y clean all
 
 # Install MKL
 # http://registrationcenter-download.intel.com/akdlm/irc_nas/tec/14895/l_mkl_2019.1.144.tgz
-ARG MKL_VERSION="2019.1.144"
-ARG MKL_MAGIC_NUMBER="14895"
+ENV MKL_VERSION "2019.1.144"
+ENV MKL_MAGIC_NUMBER "14895"
 ENV MKL_DOWNLOAD "l_mkl_$MKL_VERSION"
 RUN source /opt/rh/devtoolset-7/enable && cd /tmp && \
   curl -L http://registrationcenter-download.intel.com/akdlm/irc_nas/tec/$MKL_MAGIC_NUMBER/$MKL_DOWNLOAD.tgz | \
@@ -26,7 +25,7 @@ RUN source /opt/rh/devtoolset-7/enable && cd /tmp && \
 ENV MKLROOT /opt/intel/compilers_and_libraries_$MKL_VERSION/linux/mkl
 RUN echo "$MKLROOT/lib" > /etc/ld.so.conf.d/mkl.conf
 # Install a more up-to-date Boost
-ARG BOOST_VERSION="1_68_0"
+ENV BOOST_VERSION "1_68_0"
 RUN source /opt/rh/devtoolset-7/enable && cd /tmp && \
   curl -L https://dl.bintray.com/boostorg/release/1.68.0/source/boost_$BOOST_VERSION.tar.gz | \
   tar xvz && \
@@ -36,10 +35,10 @@ RUN source /opt/rh/devtoolset-7/enable && cd /tmp && \
   cd && \
   rm -rf /tmp/*
 # Build stuff
-ARG SOFA_VERSION="2018_0130_C"
-ARG EIGEN_VERSION="3.3.4"
-ARG LEVMAR_VERSION="2.6"
-ARG FFTW_VERSION="3.3.8"
+ENV SOFA_VERSION "2018_0130_C"
+ENV EIGEN_VERSION "3.3.4"
+ENV LEVMAR_VERSION "2.6"
+ENV FFTW_VERSION "3.3.8"
 # FFTW
 RUN source /opt/rh/devtoolset-7/enable && cd /tmp && curl -L http://fftw.org/fftw-$FFTW_VERSION.tar.gz | \
     tar xvz && \
@@ -123,3 +122,13 @@ RUN source /opt/rh/devtoolset-7/enable && cd /usr/local/src && \
     cd klipReduce && \
     make -B -f $MXMAKEFILE t=klipReduce && \
     make -B -f $MXMAKEFILE t=klipReduce install
+ENV LD_LIBRARY_PATH "/opt/intel/mkl/lib/intel64_lin:/usr/local/lib:$LD_LIBRARY_PATH"
+
+# UA HPC specific: make directories for mount points
+RUN mkdir /extra
+RUN mkdir /xdisk
+RUN mkdir /rsgrps
+RUN mkdir /cm/shared
+RUN mkdir /cm/local
+
+ENTRYPOINT ["klipReduce"]

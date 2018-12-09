@@ -1,7 +1,7 @@
 Bootstrap: docker
 From: centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
 %post
-
+# su root
 yum -y update
 yum -y install centos-release-scl
 yum -y install devtoolset-7
@@ -126,12 +126,15 @@ make -B -f $MXMAKEFILE t=klipReduce install
 LD_LIBRARY_PATH="/opt/intel/mkl/lib/intel64_lin:/usr/local/lib:$LD_LIBRARY_PATH"
 
 # UA HPC specific: make directories for mount points
-mkdir /extra
-mkdir /xdisk
-mkdir /rsgrps
-mkdir /cm/shared
-mkdir /cm/local
+mkdir -p /extra
+mkdir -p /xdisk
+mkdir -p /rsgrps
+mkdir -p /cm/shared
+mkdir -p /cm/local
 
+# Docker best practice: run as unprivileged user
+useradd -m krank
+# su krank
 %environment
 export MKL_VERSION="2019.1.144"
 export MKL_MAGIC_NUMBER="14895"

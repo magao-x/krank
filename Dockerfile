@@ -1,5 +1,5 @@
 FROM centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
-
+USER root
 RUN yum -y update
 RUN yum -y install centos-release-scl
 RUN yum -y install devtoolset-7
@@ -124,10 +124,13 @@ RUN source /opt/rh/devtoolset-7/enable && cd /usr/local/src && \
 ENV LD_LIBRARY_PATH "/opt/intel/mkl/lib/intel64_lin:/usr/local/lib:$LD_LIBRARY_PATH"
 
 # UA HPC specific: make directories for mount points
-RUN mkdir /extra
-RUN mkdir /xdisk
-RUN mkdir /rsgrps
-RUN mkdir /cm/shared
-RUN mkdir /cm/local
+RUN mkdir -p /extra
+RUN mkdir -p /xdisk
+RUN mkdir -p /rsgrps
+RUN mkdir -p /cm/shared
+RUN mkdir -p /cm/local
 
+# Docker best practice: run as unprivileged user
+RUN useradd -m krank
+USER krank
 ENTRYPOINT ["klipReduce"]

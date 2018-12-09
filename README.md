@@ -23,9 +23,14 @@ Turn the krank on your data reduction tasks with the magic of _containers_.
 1. Install Docker Community Edition locally
 1. `pip install spython` the [Singularity CLI](https://singularityhub.github.io/singularity-cli/)
 2. `git clone` this repository
-3. `./build.sh` (equivalently, `docker build . -t magaox/krank && `)
-4. `./push.sh` (equivalently, `docker login && docker push magaox/krank:latest`)
+3. `./build.sh`
+4. `./push.sh`
 5. `git commit` and `git push` when it's all nice and kentucky
+
+## Weird quirks
+
+  - Singularity only has two (useful) users, `root` at build time (as whom all build commands are run) and `$USER` (i.e. you) at run time.
+  - UA-specific HPC network filesystem mount points are present as empty directories in the image to silence Singularity warnings (and let you access HPC shares when run on UA HPC)
 
 ## Reference
 

@@ -1,6 +1,5 @@
 FROM centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
 
-USER root
 RUN yum -y update
 RUN yum -y install centos-release-scl
 RUN yum -y install devtoolset-7

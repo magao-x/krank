@@ -14,8 +14,10 @@ import itertools
 import subprocess
 
 DEFAULT_INTERFACE = "::"  # IPv6, all interfaces
-DEFAULT_HOSTNAME = "localhost"
 DEFAULT_PORT = 9876
+
+DEFAULT_CONNECTION_INFO_FILENAME = "koordinator_connection_info.json"
+DEFAULT_LEDGER_FILENAME = "ledger.json"
 
 WAITING, CLAIMED, COMPLETED, FAILED = TASK_STATES = (
     "WAITING", "CLAIMED", "COMPLETED", "FAILED"
@@ -127,7 +129,7 @@ class Ledger:
         now = datetime.datetime.now()
         tasks = [
             {
-                "command": command + " ".join(options),
+                "command": command + " " + " ".join(options),
                 "created": now,
                 "changed": now,
                 "attempts": 0,
@@ -204,18 +206,20 @@ class Permutator:
 
 
 class Koordinator:
-    def __init__(self, ledger, host, port, connection_info):
+    def __init__(self, ledger, hostname, port, connection_info_filename):
         self.ledger = ledger
-        self.host = host
-        self.port = port
-        self.server = None
         self._state = STARTING
-        self.connection_info_path = Path(connection_info)
+        self.connection_info_path = Path(connection_info_filename)
         if self.connection_info_path.exists():
             raise RuntimeError(
                 f"{self.connection_info_path!r} already exists! Ensure Koordinator is "
                 "not already running and delete it."
             )
+        self.hostname = socket.getfqdn() if hostname is None else hostname
+        self.port = port
+        # Initialized after starting asyncio server in self.run()
+        self.server = None
+        self.address = None
 
     @property
     def running(self):
@@ -301,11 +305,19 @@ class Koordinator:
             await self.stop()
 
     async def run(self):
-        self.server = await asyncio.start_server(self.dispatch, host=self.host, port=self.port)
+        self.server = await asyncio.start_server(
+            self.dispatch,
+            host=DEFAULT_INTERFACE,
+            port=self.port
+        )
         self.address = self.server.sockets[0].getsockname()
-        print(f"Serving on {self.address}")
+        # n.b. if port was 0, this updates it with the actual assigned port:
+        self.port = self.address[1]
+
+        print(
+            f"Serving on {self.address[0]}:{self.port}, advertising as {self.hostname}:{self.port}")
         with self.connection_info_path.open('w') as file_handle:
-            write_connection_info(file_handle, self.address, self.port)
+            write_connection_info(file_handle, self.hostname, self.port)
         self._state = RUNNING
         async with self.server:
             await self.server.wait_closed()
@@ -313,10 +325,14 @@ class Koordinator:
 
 
 class Klient:
-    def __init__(self, koordinator_host, koordinator_port, dummy=False):
+    def __init__(self, connection_info_filename, dummy=False):
         self.status = STARTING
         self.last_communication = datetime.datetime.now()
-        self.koordinator_host, self.koordinator_port = koordinator_host, koordinator_port
+        self.connection_info_path = Path(connection_info_filename)
+        with self.connection_info_path.open('r') as file_handle:
+            connection_info = read_connection_info(file_handle)
+        self.koordinator_host, self.koordinator_port = connection_info
+        print(f"Configured with koordinator {connection_info}")
         # Can only use one of IPv4 *or* IPv6, and passing
         # hostnames can give you multiple IPs...
         # See https://bugs.python.org/issue29980
@@ -340,6 +356,7 @@ class Klient:
         except subprocess.CalledProcessError as exception:
             success = False
             output = exception.output
+        output = output.decode('utf-8')
         return {"success": success, "output": output}
 
     async def run(self):
@@ -411,18 +428,6 @@ class Klient:
             self.status = STOPPED
 
 
-async def start_koordinator(args):
-    print("koordinator", args)
-    ledger = await Ledger.from_disk(args.ledger)
-    with open(args.options_json_file, "r") as f:
-        options_dict = json.load(f)
-    tasks_iterable = Permutator(options_dict)
-    await ledger.add_many(" ".join(args.command_to_run), tasks_iterable)
-    app = Koordinator(ledger, args.interface, args.port, args.connection_info)
-    await app.run()
-    return 0
-
-
 def write_connection_info(file_handle, host, port):
     json.dump({"host": host, "port": port}, file_handle)
     return host, port
@@ -438,14 +443,23 @@ def read_connection_info(file_handle):
     return connection_info['host'], connection_info['port']
 
 
-async def start_klient(args):
-    print("klient", args)
-    klient = Klient(args.koordinator_host, args.port, dummy=args.dummy)
-    await klient.run()
+async def start_koordinator(args):
+    print("koordinator", args)
+    ledger = await Ledger.from_disk(args.ledger)
+    with open(args.options_json_file, "r") as f:
+        options_dict = json.load(f)
+    tasks_iterable = Permutator(options_dict)
+    await ledger.add_many(" ".join(args.command_to_run), tasks_iterable)
+    app = Koordinator(ledger, args.hostname, args.port, args.connection_info)
+    await app.run()
     return 0
 
-DEFAULT_CONNECTION_INFO_FILENAME = "koordinator_connection_info.json"
-DEFAULT_LEDGER_FILENAME = "ledger.json"
+
+async def start_klient(args):
+    print("klient", args)
+    klient = Klient(args.connection_info, dummy=args.dummy)
+    await klient.run()
+    return 0
 
 
 def main():
@@ -473,16 +487,15 @@ def main():
              "(default: ./{})".format(DEFAULT_CONNECTION_INFO_FILENAME)
     )
     koordinator_parser.add_argument(
-        "-i", "--interface",
-        required=False, default=DEFAULT_INTERFACE,
-        help="Interface (IP) on which to listen for klient connections "
-             "(default: {})".format(DEFAULT_INTERFACE)
-    )
-    koordinator_parser.add_argument(
         "-p", "--port",
         required=False, type=int, default=DEFAULT_PORT,
         help="Port the koordinator listens on "
              "(default: {})".format(DEFAULT_PORT)
+    )
+    koordinator_parser.add_argument(
+        "-n", "--hostname",
+        required=False,
+        help="Hostname to advertise to klients"
     )
     koordinator_parser.add_argument(
         "command_to_run", nargs="+",
@@ -500,22 +513,9 @@ def main():
     klient_parser = subparsers.add_parser("klient")
     klient_parser.set_defaults(func=start_klient)
     klient_parser.add_argument(
-        "-k", "--koordinator-host",
-        metavar="HOST",
-        dest="host",
-        default=DEFAULT_HOSTNAME,
-        help="Hostname or IP of a host running Koordinator, used if "
-             "INFO_PATH does not exist (default: {})".format(DEFAULT_HOSTNAME)
-    )
-    klient_parser.add_argument(
-        "-p", "--port",
-        type=int, default=DEFAULT_PORT,
-        help="Koordinator host port, used if INFO_PATH"
-             " does not exist (default: {})".format(DEFAULT_PORT)
-    )
-    klient_parser.add_argument(
         "-c", "--read-connection-details-from",
-        metavar="INFO_PATH",
+        metavar="CONNECTION_INFO_PATH",
+        dest="connection_info",
         required=False, default=default_connection_info_path,
         help="Filesystem path to read koordinator connection info from "
              "(default: ./{})".format(DEFAULT_CONNECTION_INFO_FILENAME)

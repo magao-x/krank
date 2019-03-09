@@ -9,6 +9,7 @@
 
 Turn the krank on your data reduction tasks with the magic of _containers_.
 
+
 ## Usage
 
 0. Log in to [_Ocelote_](https://docs.hpc.arizona.edu/display/UAHPC/Ocelote+Quick+Start) or [_El Gato_](http://elgato.arizona.edu/getting-started)
@@ -19,9 +20,15 @@ Turn the krank on your data reduction tasks with the magic of _containers_.
 
 ## Development
 
+### Working on `krank.py`
+
+0. Install pytest with asyncio: `pip install pytest pytest-asyncio`
+1. Run tests: `pytest` in this directory
+
+### Adding to the Docker image
+
 0. Get access to https://hub.docker.com/r/magaox/krank/
 1. Install Docker Community Edition locally
-1. `pip install spython` the [Singularity CLI](https://singularityhub.github.io/singularity-cli/)
 2. `git clone` this repository
 3. `./build.sh`
 4. `./push.sh`

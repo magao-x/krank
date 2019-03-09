@@ -325,13 +325,10 @@ class Koordinator:
 
 
 class Klient:
-    def __init__(self, connection_info_filename, dummy=False):
+    def __init__(self, koordinator_host, koordinator_port, dummy=False):
         self.status = STARTING
         self.last_communication = datetime.datetime.now()
-        self.connection_info_path = Path(connection_info_filename)
-        with self.connection_info_path.open('r') as file_handle:
-            connection_info = read_connection_info(file_handle)
-        self.koordinator_host, self.koordinator_port = connection_info
+        self.koordinator_host, self.koordinator_port = koordinator_host, koordinator_port
         print(f"Configured with koordinator {connection_info}")
         # Can only use one of IPv4 *or* IPv6, and passing
         # hostnames can give you multiple IPs...
@@ -457,7 +454,13 @@ async def start_koordinator(args):
 
 async def start_klient(args):
     print("klient", args)
-    klient = Klient(args.connection_info, dummy=args.dummy)
+    if args.hostname is not None:
+        hostname, port = args.hostname, args.port
+    else:
+        connection_info_path = Path(args.connection_info)
+        with connection_info_path.open('r') as file_handle:
+            hostname, port = read_connection_info(file_handle)
+    klient = Klient(hostname, port, dummy=args.dummy)
     await klient.run()
     return 0
 
@@ -468,7 +471,17 @@ def main():
     default_ledger_path = cwd / DEFAULT_LEDGER_FILENAME
     default_connection_info_path = cwd / DEFAULT_CONNECTION_INFO_FILENAME
     parser = argparse.ArgumentParser(description=__doc__)
-
+    parser.add_argument(
+        "-p", "--port",
+        required=False, type=int, default=DEFAULT_PORT,
+        help="Port the koordinator listens on "
+             "(default: {})".format(DEFAULT_PORT)
+    )
+    parser.add_argument(
+        "-n", "--hostname",
+        required=False,
+        help="Koordinator hostname (to advertise / connect to), super"
+    )
     subparsers = parser.add_subparsers(dest="command_name")
     koordinator_parser = subparsers.add_parser("koordinator")
     koordinator_parser.set_defaults(func=start_koordinator)
@@ -485,17 +498,6 @@ def main():
         required=False, default=default_connection_info_path,
         help="Filesystem path to write klient connection info to "
              "(default: ./{})".format(DEFAULT_CONNECTION_INFO_FILENAME)
-    )
-    koordinator_parser.add_argument(
-        "-p", "--port",
-        required=False, type=int, default=DEFAULT_PORT,
-        help="Port the koordinator listens on "
-             "(default: {})".format(DEFAULT_PORT)
-    )
-    koordinator_parser.add_argument(
-        "-n", "--hostname",
-        required=False,
-        help="Hostname to advertise to klients"
     )
     koordinator_parser.add_argument(
         "command_to_run", nargs="+",

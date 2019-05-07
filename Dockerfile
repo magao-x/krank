@@ -149,11 +149,8 @@ RUN mkdir -p /rsgrps
 RUN mkdir -p /cm/shared
 RUN mkdir -p /cm/local
 
-# Add krank.py
-ADD krank.py /usr/local/bin/krank.py
-RUN chmod +x /usr/local/bin/krank.py
-
 # Docker best practice: run as unprivileged user
 RUN useradd -m krank
 USER krank
-ENTRYPOINT ["krank.py"]
+ADD krank.sh /usr/local/bin/krank.sh
+ENTRYPOINT ["krank.sh"]

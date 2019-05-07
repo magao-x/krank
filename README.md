@@ -10,20 +10,19 @@
 Turn the krank on your data reduction tasks with the magic of _containers_.
 
 
-## Usage
+## Usage via Docker
+
+_TODO_
+
+## Usage on UA HPC (Singularity)
 
 0. Log in to [_Ocelote_](https://docs.hpc.arizona.edu/display/UAHPC/Ocelote+Quick+Start) or [_El Gato_](http://elgato.arizona.edu/getting-started)
 1. `module load singularity` to make the `singularity` command available
-2. (optional) `cd /extra/$USER` so that the image builds outside your (somewhat small) home directory quota
-3. `singularity pull docker://magaox/krank`
-4. **TODO: modify mounts, run**
+2. Request a large temporary workspace with `xdisk -c create -m 1000` and then `cd /xdisk/$USER` so that the image builds outside your (somewhat small) home directory quota
+3. `singularity build krank.img docker://magaox/krank`
+4. Copy the images you want to analyze into `/xdisk/$USER` with rsync (e.g. `rsync ./data filexfer.hpc.arizona.edu:/xdisk/yournetid/data`)
 
 ## Development
-
-### Working on `krank.py`
-
-0. Install pytest with asyncio: `pip install pytest pytest-asyncio`
-1. Run tests: `pytest` in this directory
 
 ### Adding to the Docker image
 

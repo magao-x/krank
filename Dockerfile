@@ -1,4 +1,4 @@
-FROM centos:6.10@sha256:b4c3fe75b135ca1c26ef6feb8153aade8a31c4e3e763376529c1088de7e973f4
+FROM centos:7.6.1810
 USER root
 RUN yum -y update
 RUN yum -y install centos-release-scl
@@ -109,7 +109,7 @@ RUN source /opt/rh/devtoolset-7/enable && cd /tmp && git clone --depth=1 https:/
     rm -rf /tmp/*
 # mxlib
 RUN source /opt/rh/devtoolset-7/enable && cd /usr/local/src && \
-    git clone --depth=1 https://github.com/jaredmales/mxlib.git && \
+    git clone https://github.com/jaredmales/mxlib.git && \
     cd mxlib && \
     git checkout klipReduce && \
     echo "PREFIX = /usr/local" >> local/Common.mk && \
@@ -124,22 +124,22 @@ RUN source /opt/rh/devtoolset-7/enable && cd /usr/local/src && \
     make -B -f $MXMAKEFILE t=klipReduce install
 ENV LD_LIBRARY_PATH "/opt/intel/mkl/lib/intel64_lin:/usr/local/lib:$LD_LIBRARY_PATH"
 # Python 3.7
-ENV MINICONDA_VERSION 4.5.11
-ENV CONDA_DIR /opt/conda
-RUN mkdir -p $CONDA_DIR
-ENV PATH $CONDA_DIR/bin:$PATH
-# from https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L64
-RUN cd /tmp && \
-    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "e1045ee415162f944b6aebfe560b8fee *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
-    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
-    $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
-    $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
-    $CONDA_DIR/bin/conda update --all --quiet --yes && \
-    conda clean -tipsy
+# ENV MINICONDA_VERSION 4.5.11
+# ENV CONDA_DIR /opt/conda
+# RUN mkdir -p $CONDA_DIR
+# ENV PATH $CONDA_DIR/bin:$PATH
+# # from https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile#L64
+# RUN cd /tmp && \
+#     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+#     echo "e1045ee415162f944b6aebfe560b8fee *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+#     /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+#     rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+#     $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+#     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+#     $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+#     $CONDA_DIR/bin/conda install --quiet --yes conda="${MINICONDA_VERSION%.*}.*" && \
+#     $CONDA_DIR/bin/conda update --all --quiet --yes && \
+#     conda clean -tipsy
 # RUN conda install --quiet --yes pytest=4.3 && \
 #     conda clean -tipsy
 # UA HPC specific: make directories for mount points

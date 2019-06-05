@@ -22,7 +22,18 @@ _TODO_
 3. `singularity build krank.img docker://magaox/krank`
 4. Copy the images you want to analyze into `/xdisk/$USER` with rsync (e.g. `rsync ./data filexfer.hpc.arizona.edu:/xdisk/yournetid/data`)
 
+## Weird quirks
+
+  - UA HPC has a storage quota **and** a file count quota. Trying to retain intermediate files will quickly exhaust the latter, so be sure to delete those after combining.
+  - Singularity only has two (useful) users, `root` at build time (as whom all build commands are run) and `$USER` (i.e. you) at run time.
+  - UA-specific HPC network filesystem mount points are present as empty directories in the image to silence Singularity warnings (and let you access HPC shares when run on UA HPC)
+
 ## Development
+
+### Inspecting the image
+
+  - **In Singularity**: `singularity shell krank.img`
+  - **In Docker**: `docker run -it magaox/krank bash` (After commenting out the entrypoint and rebuilding)
 
 ### Adding to the Docker image
 
@@ -33,10 +44,6 @@ _TODO_
 4. `./push.sh`
 5. `git commit` and `git push` when it's all nice and kentucky
 
-## Weird quirks
-
-  - Singularity only has two (useful) users, `root` at build time (as whom all build commands are run) and `$USER` (i.e. you) at run time.
-  - UA-specific HPC network filesystem mount points are present as empty directories in the image to silence Singularity warnings (and let you access HPC shares when run on UA HPC)
 
 ## Reference
 
